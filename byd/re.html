@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mücevher Konfigüratörü Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
+    <style>
+        /* Stil kısmı aynen korundu */
+        body { 
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f0f0f0;
+        }
+        #control-panel {
+            width: 380px;
+            height: 100vh;
+            background: #f5f5f5;
+            padding: 15px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            border-left: 1px solid #ddd;
+        }
+        #view-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+            background: white;
+        }
+        .viewport {
+            position: relative;
+            border: 1px solid #ddd;
+            background: white;
+            overflow: hidden;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .control-section {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .control-section h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .button-grid {
+            display: grid;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .stone-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        .setting-grid-normal {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        .setting-grid-special {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        .size-grid {
+            grid-template-columns: repeat(5, 1fr);
+        }
+        .metal-grid {
+            grid-template-columns: repeat(7, 1fr);
+        }
+        .band-type-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+        .band-metal-grid {
+            grid-template-columns: repeat(7, 1fr);
+        }
+        button {
+            padding: 10px 5px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            word-break: break-word;
+            line-height: 1.2;
+            height: 40px;
+        }
+        .stone-btn, .yuva-btn, .kolar-btn, .size-btn {
+            aspect-ratio: 1;
+            height: auto;
+        }
+        .metal-btn {
+            border-radius: 50%;
+            padding: 8px;
+            aspect-ratio: 1;
+            height: auto;
+        }
+        .active {
+            border: 2px solid #333;
+            font-weight: bold;
+        }
+        .hidden {
+            display: none;
+        }
+        #buy-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 4px;
+            background: #FF5722;
+            color: white;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+            height: auto;
+        }
+        #buy-btn:hover {
+            background: #E64A19;
+            transform: scale(1.02);
+        }
+        .ring-size-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .ring-size-select {
+            width: 80px;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            height: 40px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <!-- Görünümler (Sol) -->
+    <div id="view-container">
+        <div class="viewport" id="view-3d">
+            <canvas id="canvas3d"></canvas>
+        </div>
+        <div class="viewport" id="view-x">
+            <canvas id="canvasX"></canvas>
+        </div>
+        <div class="viewport" id="view-y">
+            <canvas id="canvasY"></canvas>
+        </div>
+        <div class="viewport" id="view-z">
+            <canvas id="canvasZ"></canvas>
+        </div>
+    </div>
+
+    <!-- Kontrol Paneli (Sağ) -->
+    <div id="control-panel">
+        <!-- Taş Tipi Seçimi -->
+        <div class="control-section">
+            <h3>Taş Tipi</h3>
+            <div class="button-grid stone-grid">
+                <button class="stone-btn" data-stone="RO">Round</button>
+                <button class="stone-btn" data-stone="EM">Emerald</button>
+                <button class="stone-btn" data-stone="OV">Oval</button>
+                <button class="stone-btn" data-stone="MR">Marquise</button>
+                <button class="stone-btn" data-stone="PR">Princess</button>
+                <button class="stone-btn active" data-stone="PE">Pear</button>
+            </div>
+        </div>
+
+        <!-- Taş Boyutu -->
+        <div class="control-section">
+            <h3>Taş Boyutu</h3>
+            <div class="button-grid size-grid" id="stone-size-buttons">
+                <!-- Dinamik olarak eklenecek -->
+            </div>
+        </div>
+
+        <!-- Yuva Tipi -->
+        <div class="control-section">
+            <h3>Yuva Tipi</h3>
+            <div class="button-grid setting-grid-normal" id="normal-yuva-types">
+                <button class="yuva-btn active" data-yuva="SY-NO-RE">SY-NO</button>
+                <button class="yuva-btn" data-yuva="SY-ST-RE">SY-ST</button>
+                <button class="yuva-btn" data-yuva="SY-HL-RE">SY-HL</button>
+                <button class="yuva-btn" data-yuva="SK-NO-RE">SK-NO</button>
+                <button class="yuva-btn" data-yuva="SK-ST-RE">SK-ST</button>
+                <button class="yuva-btn" data-yuva="SH-NO-RE">SH-NO</button>
+            </div>
+            <div class="button-grid setting-grid-special hidden" id="special-yuva-types">
+                <button class="yuva-btn" data-yuva="AY-NO-RE">AY-NO</button>
+                <button class="yuva-btn" data-yuva="AY-ST-RE">AY-ST</button>
+                <button class="yuva-btn" data-yuva="AY-HL-RE">AY-HL</button>
+                <button class="yuva-btn" data-yuva="AK-NO-RE">AK-NO</button>
+                <button class="yuva-btn" data-yuva="AK-ST-RE">AK-ST</button>
+                <button class="yuva-btn" data-yuva="AH-NO-RE">AH-NO</button>
+                <button class="yuva-btn" data-yuva="SY-NO-RE">SY-NO</button>
+                <button class="yuva-btn" data-yuva="SY-ST-RE">SY-ST</button>
+                <button class="yuva-btn" data-yuva="SY-HL-RE">SY-HL</button>
+                <button class="yuva-btn" data-yuva="SK-NO-RE">SK-NO</button>
+                <button class="yuva-btn" data-yuva="SK-ST-RE">SK-ST</button>
+                <button class="yuva-btn" data-yuva="SH-NO-RE">SH-NO</button>
+            </div>
+        </div>
+        
+        <!-- Materyal Seçimi -->
+        <div class="control-section">
+            <h3>Yuva Materyali</h3>
+            <div class="button-grid metal-grid" id="metal-types">
+                <button class="metal-btn active" data-metal="Platinum" style="background-color: #e5e4e2;" title="Platin"></button>
+                <button class="metal-btn" data-metal="YellowGold18k" style="background-color: #ffdf00;" title="Sarı Altın 18k"></button>
+                <button class="metal-btn" data-metal="YellowGold14k" style="background-color: #ffd700;" title="Sarı Altın 14k"></button>
+                <button class="metal-btn" data-metal="WhiteGold18k" style="background-color: #f8f7f2;" title="Beyaz Altın 18k"></button>
+                <button class="metal-btn" data-metal="WhiteGold14k" style="background-color: #f2f1e8;" title="Beyaz Altın 14k"></button>
+                <button class="metal-btn" data-metal="RoseGold18k" style="background-color: #ddb79f;" title="Kırmızı Altın 18k"></button>
+                <button class="metal-btn" data-metal="RoseGold14k" style="background-color: #e0c5a6;" title="Kırmızı Altın 14k"></button>
+            </div>
+        </div>
+        
+        <!-- Kol Tipi -->
+        <div class="control-section">
+            <h3>Kol Tipi</h3>
+            <div class="button-grid band-type-grid" id="band-types">
+                <button class="kolar-btn active" data-band="1">Kol 1</button>
+                <button class="kolar-btn" data-band="2">Kol 2</button>
+                <button class="kolar-btn" data-band="3">Kol 3</button>
+                <button class="kolar-btn" data-band="4">Kol 4</button>
+                <button class="kolar-btn" data-band="5">Kol 5</button>
+                <button class="kolar-btn" data-band="6">Kol 6</button>
+                <button class="kolar-btn" data-band="7">Kol 7</button>
+                <button class="kolar-btn" data-band="8">Kol 8</button>
+            </div>
+        </div>
+        
+        <!-- Kol Materyali -->
+        <div class="control-section">
+            <h3>Kol Materyali</h3>
+            <div class="button-grid band-metal-grid" id="band-metals">
+                <button class="metal-btn active" data-band-metal="Platinum" style="background-color: #e5e4e2;" title="Platin"></button>
+                <button class="metal-btn" data-band-metal="YellowGold18k" style="background-color: #ffdf00;" title="Sarı Altın 18k"></button>
+                <button class="metal-btn" data-band-metal="YellowGold14k" style="background-color: #ffd700;" title="Sarı Altın 14k"></button>
+                <button class="metal-btn" data-band-metal="WhiteGold18k" style="background-color: #f8f7f2;" title="Beyaz Altın 18k"></button>
+                <button class="metal-btn" data-band-metal="WhiteGold14k" style="background-color: #f2f1e8;" title="Beyaz Altın 14k"></button>
+                <button class="metal-btn" data-band-metal="RoseGold18k" style="background-color: #ddb79f;" title="Kırmızı Altın 18k"></button>
+                <button class="metal-btn" data-band-metal="RoseGold14k" style="background-color: #e0c5a6;" title="Kırmızı Altın 14k"></button>
+            </div>
+        </div>
+        
+        <!-- Yüzük Boyu ve Satın Al -->
+        <div class="control-section">
+            <h3>Yüzük Boyu</h3>
+            <div class="ring-size-container">
+                <select class="ring-size-select">
+                    <option>9</option>
+                    <option>10</option>
+                    <option>11</option>
+                    <option>12</option>
+                    <option>13</option>
+                    <option selected>14</option>
+                    <option>15</option>
+                    <option>16</option>
+                    <option>17</option>
+                    <option>18</option>
+                </select>
+                <button id="buy-btn">SATIN AL</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. THREE.JS KURULUMU
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf8f8f8);
+        
+        // Kameralar (daha yakın pozisyonlar)
+        const camera3D = new THREE.PerspectiveCamera(45, 1, 0.001, 100);
+        const cameraX = new THREE.PerspectiveCamera(45, 1, 0.001, 100);
+        const cameraY = new THREE.PerspectiveCamera(45, 1, 0.001, 100);
+        const cameraZ = new THREE.PerspectiveCamera(45, 1, 0.001, 100);
+        
+        // Kamera pozisyonları (daha yukarı ve yakın)
+        const cameraPositions = {
+            '3D': { position: new THREE.Vector3(0, 0.015, 0.05), target: new THREE.Vector3(0, 0.01, 0) },
+            'X': { position: new THREE.Vector3(0.03, 0.05, 0.02), target: new THREE.Vector3(0.0, 0.01, 0) },
+            'Y': { position: new THREE.Vector3(0, 0.05, 0.01), target: new THREE.Vector3(0, 0.01, 0) },
+            'Z': { position: new THREE.Vector3(0.01, 0.05, 0.05), target: new THREE.Vector3(0, 0.01, 0) }
+        };
+        
+        // Renderer'lar
+        const renderer3D = new THREE.WebGLRenderer({ 
+            canvas: document.getElementById('canvas3d'), 
+            antialias: true,
+            alpha: true
+        });
+        const rendererX = new THREE.WebGLRenderer({ 
+            canvas: document.getElementById('canvasX'), 
+            antialias: true,
+            alpha: true
+        });
+        const rendererY = new THREE.WebGLRenderer({ 
+            canvas: document.getElementById('canvasY'), 
+            antialias: true,
+            alpha: true
+        });
+        const rendererZ = new THREE.WebGLRenderer({ 
+            canvas: document.getElementById('canvasZ'), 
+            antialias: true,
+            alpha: true
+        });
+        
+        // Işıklandırma
+        const ambientLight = new THREE.AmbientLight(0xffffff, 2.0);
+        scene.add(ambientLight);
+        
+        const directionalLight1 = new THREE.DirectionalLight(0xffffff, 2.5);
+        directionalLight1.position.set(1, 1, 1);
+        scene.add(directionalLight1);
+        
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 2.0);
+        directionalLight2.position.set(-1, -1, -1);
+        scene.add(directionalLight2);
+        
+        const directionalLight3 = new THREE.DirectionalLight(0xffffff, 1.5);
+        directionalLight3.position.set(0, 1, 0);
+        scene.add(directionalLight3);
+        
+        // Kontroller (sadece 3D görünüm için)
+        const controls = new THREE.OrbitControls(camera3D, renderer3D.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.minDistance = 0.03;
+        controls.maxDistance = 0.07;
+        controls.zoomSpeed = 0.5;
+        controls.mouseButtons = {
+            LEFT: THREE.MOUSE.ROTATE,
+            MIDDLE: null,
+            RIGHT: null
+        };
+        controls.enablePan = false;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 1;
+        
+        // Model Yükleyici
+        const loader = new THREE.GLTFLoader();
+        let currentYuva = null;
+        let currentMainStone = null;
+        let currentHlStone = null;
+        let currentBand = null;
+        let currentBandStone = null;
+        let currentStoneType = 'PE';
+        let currentStoneSize = '1';
+        let currentYuvaType = 'SY-NO-RE';
+        let currentBandType = '1';
+        let currentMetal = 'Platinum';
+        let currentBandMetal = 'Platinum';
+        let currentRingSize = 14;
+        
+        // Taş boyutu seçenekleri
+        const stoneSizeOptions = {
+            'RO': [
+                {value: '1', text: '0.30 ct', sizeCode: '4343'},
+                {value: '2', text: '0.50 ct', sizeCode: '5252'},
+                {value: '3', text: '0.70 ct', sizeCode: '5757'},
+                {value: '4', text: '1.00 ct', sizeCode: '6565'},
+                {value: '5', text: '1.20 ct', sizeCode: '6868'}
+            ],
+            'EM': [
+                {value: '1', text: '0.30 ct', sizeCode: '5030'},
+                {value: '2', text: '0.50 ct', sizeCode: '6040'},
+                {value: '3', text: '0.70 ct', sizeCode: '6545'},
+                {value: '4', text: '1.00 ct', sizeCode: '7050'},
+                {value: '5', text: '1.50 ct', sizeCode: '8560'}
+            ],
+            'OV': [
+                {value: '1', text: '0.25 ct', sizeCode: '5035'},
+                {value: '2', text: '0.50 ct', sizeCode: '6545'},
+                {value: '3', text: '0.75 ct', sizeCode: '7555'},
+                {value: '4', text: '1.00 ct', sizeCode: '8060'},
+                {value: '5', text: '1.25 ct', sizeCode: '9065'}
+            ],
+            'MR': [
+                {value: '1', text: '0.30 ct', sizeCode: '6530'},
+                {value: '2', text: '0.50 ct', sizeCode: '8040'},
+                {value: '3', text: '0.70 ct', sizeCode: '9045'},
+                {value: '4', text: '1.00 ct', sizeCode: '1050'},
+                {value: '5', text: '1.20 ct', sizeCode: '1155'}
+            ],
+            'PR': [
+                {value: '1', text: '0.30 ct', sizeCode: '3535'},
+                {value: '2', text: '0.50 ct', sizeCode: '4343'},
+                {value: '3', text: '0.75 ct', sizeCode: '5050'},
+                {value: '4', text: '1.00 ct', sizeCode: '5555'},
+                {value: '5', text: '1.25 ct', sizeCode: '6060'}
+            ],
+            'PE': [
+                {value: '1', text: '0.30 ct', sizeCode: '6040'},
+                {value: '2', text: '0.50 ct', sizeCode: '7550'},
+                {value: '3', text: '0.75 ct', sizeCode: '8555'},
+                {value: '4', text: '1.00 ct', sizeCode: '9060'},
+                {value: '5', text: '1.25 ct', sizeCode: '1065'}
+            ]
+        };
+
+        // Taş boyutu butonlarını güncelle
+        function updateStoneSizeButtons() {
+            const sizeButtonsContainer = document.getElementById('stone-size-buttons');
+            sizeButtonsContainer.innerHTML = '';
+            
+            stoneSizeOptions[currentStoneType].forEach((option, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'size-btn';
+                if(index === stoneSizeOptions[currentStoneType].length - 1) {
+                    btn.classList.add('active');
+                    currentStoneSize = option.value;
+                }
+                btn.textContent = option.text;
+                btn.dataset.size = option.value;
+                btn.dataset.sizeCode = option.sizeCode;
+                
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentStoneSize = this.dataset.size;
+                    loadModels();
+                });
+                
+                sizeButtonsContainer.appendChild(btn);
+            });
+        }
+
+        // Pırlanta materyali oluştur
+        function createDiamondMaterial() {
+            return new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                roughness: 0.1,
+                metalness: 0.9,
+                envMapIntensity: 1.0,
+                refractionRatio: 0.98,
+                transparent: true,
+                opacity: 0.9
+            });
+        }
+
+        // Tüm modelleri yükle
+        function loadModels() {
+            loadYuvaModel();
+            loadMainStone();
+            
+            if(currentYuvaType.includes('-HL-')) {
+                loadHlStone();
+            } else if(currentHlStone) {
+                scene.remove(currentHlStone);
+                currentHlStone = null;
+            }
+        }
+
+        // Ana taşı yükle (ST.glb)
+        function loadMainStone() {
+            const path = `models/yuvalar/${currentStoneType}/${currentStoneSize}/ST/ST.glb`;
+            
+            loader.load(
+                path,
+                (gltf) => {
+                    if(currentMainStone) scene.remove(currentMainStone);
+                    currentMainStone = gltf.scene;
+                    
+                    currentMainStone.traverse(child => {
+                        if (child.isMesh) {
+                            child.castShadow = false;
+                            child.material = createDiamondMaterial();
+                        }
+                    });
+                    
+                    scene.add(currentMainStone);
+                    updateCameras();
+                },
+                undefined,
+                (error) => {
+                    console.error('Ana taş yükleme hatası:', error);
+                }
+            );
+        }
+
+        // HL taşını yükle (HL.glb)
+        function loadHlStone() {
+            const path = `models/yuvalar/${currentStoneType}/${currentStoneSize}/ST/HL.glb`;
+            
+            loader.load(
+                path,
+                (gltf) => {
+                    if(currentHlStone) scene.remove(currentHlStone);
+                    currentHlStone = gltf.scene;
+                    
+                    currentHlStone.traverse(child => {
+                        if (child.isMesh) {
+                            child.castShadow = false;
+                            child.material = createDiamondMaterial();
+                        }
+                    });
+                    
+                    scene.add(currentHlStone);
+                    updateCameras();
+                },
+                undefined,
+                (error) => {
+                    console.error('HL taşı yükleme hatası:', error);
+                }
+            );
+        }
+
+        // Yuva modelini yükle
+        function loadYuvaModel() {
+            const sizeCode = document.querySelector('.size-btn.active').dataset.sizeCode;
+            const parts = currentYuvaType.split('-');
+            const tip = parts[0];
+            const varyasyon = parts[1];
+            
+            const path = `models/yuvalar/${currentStoneType}/${currentStoneSize}/OO/${currentStoneType}-${tip}-${varyasyon}-${sizeCode}.glb`;
+            
+            loader.load(
+                path,
+                (gltf) => {
+                    if(currentYuva) scene.remove(currentYuva);
+                    currentYuva = gltf.scene;
+                    
+                    currentYuva.traverse(child => {
+                        if (child.isMesh) {
+                            child.castShadow = false;
+                            updateMaterial(child, currentMetal);
+                        }
+                    });
+                    
+                    scene.add(currentYuva);
+                    updateCameras();
+                },
+                undefined,
+                (error) => {
+                    console.error('Yuva yükleme hatası:', error);
+                }
+            );
+        }
+
+        // Kol ve kol taşlarını yükle
+        function loadBandModels() {
+            loadBand();
+            
+            // 1-4 arası kollar için taş yükle
+            if(currentBandType <= 4) {
+                loadBandStone();
+            } else if(currentBandStone) {
+                // 5-8 arası kollar için taşı temizle
+                scene.remove(currentBandStone);
+                currentBandStone = null;
+            }
+        }
+
+        // Kol modelini yükle
+        function loadBand() {
+            const path = `models/kollar/OO/${currentBandType}.glb`;
+            
+            loader.load(
+                path,
+                (gltf) => {
+                    if(currentBand) scene.remove(currentBand);
+                    currentBand = gltf.scene;
+                    
+                    currentBand.traverse(child => {
+                        if (child.isMesh) {
+                            child.castShadow = false;
+                            updateMaterial(child, currentBandMetal);
+                        }
+                    });
+                    
+                    scene.add(currentBand);
+                    updateCameras();
+                },
+                undefined,
+                (error) => {
+                    console.error('Kol yükleme hatası:', error);
+                }
+            );
+        }
+
+        // Kol taşını yükle (sadece 1-4 arası kollar için)
+        function loadBandStone() {
+            const path = `models/kollar/ST/${currentBandType}.glb`;
+            
+            loader.load(
+                path,
+                (gltf) => {
+                    if(currentBandStone) scene.remove(currentBandStone);
+                    currentBandStone = gltf.scene;
+                    
+                    currentBandStone.traverse(child => {
+                        if (child.isMesh) {
+                            child.castShadow = false;
+                            child.material = createDiamondMaterial();
+                        }
+                    });
+                    
+                    scene.add(currentBandStone);
+                    updateCameras();
+                },
+                undefined,
+                (error) => {
+                    console.error('Kol taşı yükleme hatası:', error);
+                }
+            );
+        }
+
+        // Materyal değiştirme fonksiyonu (sadece yuva ve kol için)
+        function updateMaterial(mesh, metalType) {
+            if (!mesh.isMesh) return;
+            
+            const params = {
+                Platinum: { color: 0xE5E4E2, roughness: 0.3, metalness: 1.0 },
+                YellowGold18k: { color: 0xFFDF00, roughness: 0.2, metalness: 1.0 },
+                YellowGold14k: { color: 0xFFD700, roughness: 0.25, metalness: 1.0 },
+                WhiteGold18k: { color: 0xF8F7F2, roughness: 0.3, metalness: 1.0 },
+                WhiteGold14k: { color: 0xF2F1E8, roughness: 0.35, metalness: 1.0 },
+                RoseGold18k: { color: 0xDDB79F, roughness: 0.25, metalness: 1.0 },
+                RoseGold14k: { color: 0xE0C5A6, roughness: 0.3, metalness: 1.0 }
+            };
+            
+            const materialParams = params[metalType] || params['Platinum'];
+            
+            if (mesh.material instanceof THREE.MeshStandardMaterial) {
+                mesh.material.color.setHex(materialParams.color);
+                mesh.material.roughness = materialParams.roughness;
+                mesh.material.metalness = materialParams.metalness;
+                mesh.material.needsUpdate = true;
+            } else {
+                mesh.material = new THREE.MeshStandardMaterial({
+                    color: new THREE.Color(materialParams.color),
+                    roughness: materialParams.roughness,
+                    metalness: materialParams.metalness
+                });
+            }
+        }
+
+        // Kamera pozisyonlarını güncelle
+        function updateCameras() {
+            // 3D görünüm
+            camera3D.position.copy(cameraPositions['3D'].position);
+            camera3D.lookAt(cameraPositions['3D'].target);
+            
+            // X görünümü (ön)
+            cameraX.position.copy(cameraPositions['X'].position);
+            cameraX.lookAt(cameraPositions['X'].target);
+            
+            // Y görünümü (üst)
+            cameraY.position.copy(cameraPositions['Y'].position);
+            cameraY.lookAt(cameraPositions['Y'].target);
+            
+            // Z görünümü (yan)
+            cameraZ.position.copy(cameraPositions['Z'].position);
+            cameraZ.lookAt(cameraPositions['Z'].target);
+        }
+
+        // Pencere boyutuna göre renderer'ları ayarla
+        function setupViewports() {
+            const width = document.getElementById('view-3d').clientWidth;
+            const height = document.getElementById('view-3d').clientHeight;
+            
+            camera3D.aspect = width / height;
+            cameraX.aspect = width / height;
+            cameraY.aspect = width / height;
+            cameraZ.aspect = width / height;
+            
+            camera3D.updateProjectionMatrix();
+            cameraX.updateProjectionMatrix();
+            cameraY.updateProjectionMatrix();
+            cameraZ.updateProjectionMatrix();
+            
+            renderer3D.setSize(width, height);
+            rendererX.setSize(width, height);
+            rendererY.setSize(width, height);
+            rendererZ.setSize(width, height);
+        }
+
+        // Taş tipi değiştiğinde
+        document.querySelectorAll('.stone-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.stone-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentStoneType = this.dataset.stone;
+                
+                // Yuva tiplerini güncelle
+                const normalYuva = document.getElementById('normal-yuva-types');
+                const specialYuva = document.getElementById('special-yuva-types');
+                
+                if(currentStoneType === 'RO' || currentStoneType === 'OV') {
+                    normalYuva.classList.add('hidden');
+                    specialYuva.classList.remove('hidden');
+                    const firstYuvaBtn = specialYuva.querySelector('.yuva-btn');
+                    firstYuvaBtn.click();
+                } else {
+                    normalYuva.classList.remove('hidden');
+                    specialYuva.classList.add('hidden');
+                    const firstYuvaBtn = normalYuva.querySelector('.yuva-btn');
+                    firstYuvaBtn.click();
+                }
+                
+                updateStoneSizeButtons();
+                loadModels();
+            });
+        });
+
+        // Yuva tipi değiştiğinde
+        document.querySelectorAll('.yuva-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const container = this.closest('.button-grid');
+                container.querySelectorAll('.yuva-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentYuvaType = this.dataset.yuva;
+                loadModels();
+            });
+        });
+
+        // Kol tipi değiştiğinde
+        document.querySelectorAll('.kolar-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.kolar-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentBandType = this.dataset.band;
+                loadBandModels();
+            });
+        });
+
+        // Yuva materyali değiştiğinde
+        document.querySelectorAll('#metal-types .metal-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('#metal-types .metal-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentMetal = this.dataset.metal;
+                
+                if (currentYuva) {
+                    currentYuva.traverse(child => {
+                        updateMaterial(child, currentMetal);
+                    });
+                }
+            });
+        });
+
+        // Kol materyali değiştiğinde
+        document.querySelectorAll('#band-metals .metal-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('#band-metals .metal-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentBandMetal = this.dataset.bandMetal;
+                
+                if (currentBand) {
+                    currentBand.traverse(child => {
+                        updateMaterial(child, currentBandMetal);
+                    });
+                }
+            });
+        });
+
+        // Yüzük boyu değiştiğinde
+        document.querySelector('.ring-size-select').addEventListener('change', function() {
+            currentRingSize = parseInt(this.value);
+        });
+
+        // Satın al butonu
+        document.getElementById('buy-btn').addEventListener('click', function() {
+            alert(`Siparişiniz alındı!\n\nÖzet:\nTaş Tipi: ${currentStoneType}\nTaş Boyutu: ${document.querySelector('.size-btn.active').textContent}\nYuva Tipi: ${currentYuvaType}\nMateryal: ${currentMetal}\nKol Tipi: ${currentBandType}\nKol Materyali: ${currentBandMetal}\nYüzük Boyu: ${currentRingSize}`);
+        });
+
+        // Pencere boyutu değiştiğinde
+        window.addEventListener('resize', () => {
+            setupViewports();
+        });
+
+        // İlk yükleme
+        updateStoneSizeButtons();
+        loadModels();
+        loadBandModels();
+        setupViewports();
+        updateCameras();
+
+        // Animasyon döngüsü
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer3D.render(scene, camera3D);
+            rendererX.render(scene, cameraX);
+            rendererY.render(scene, cameraY);
+            rendererZ.render(scene, cameraZ);
+        }
+        animate();
+    </script>
+</body>
+</html>
